@@ -445,7 +445,7 @@ public:
    */
   static TimeStamp Now() { return Now(true); }
   static TimeStamp NowLoRes() { return Now(false); }
-
+  static MFBT_API TimeStamp Now_fuzzy(uint64_t currentTime_ns);
   /**
    * Return a timestamp representing the time when the current process was
    * created which will be comparable with other timestamps taken with this

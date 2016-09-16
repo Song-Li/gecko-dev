@@ -9,8 +9,8 @@
  */
 
 #include "mozilla/TimeStamp.h"
-#include <stdio.h>
 #include <string.h>
+//#include "prrng.h"
 
 namespace mozilla {
 
@@ -44,6 +44,7 @@ struct TimeStampInitialization
   };
 };
 
+  
 static TimeStampInitialization sInitOnce;
 
 MFBT_API TimeStamp
@@ -83,6 +84,62 @@ TimeStamp::ProcessCreation(bool& aIsInconsistent)
   return sInitOnce.mProcessCreation;
 }
 
+  /** Start Fuzzy Time stuff **/
+
+static uint64_t nextUpdate_ns,canonicalTime_ns;
+
+  //TODO: Can we make this configurable?
+static uint64_t timeGranularity_ns = 100000;
+#define FT_DURATION_CENTER_NS 100000
+  
+static uint64_t roundTime(uint64_t time_ns){
+  return floor(time_ns/timeGranularity_ns)*timeGranularity_ns;
+}
+
+/*** TODO: This whole section needs to get a random value easily ***/
+//static struct drand48_data mRandState;
+static void initFuzzyTime(){
+//   long int seedv;
+//   PR_GetRandomNoise(&seedv,sizeof(long int));
+//   srand48_r(seedv,&mRandState);
+}
+
+static uint64_t pickDuration_ns(){
+//   // Get the next stateful random value
+//   // uniform random number from 0->2**31
+//   long int rval;
+//   lrand48_r(&mRandState,&rval);
+
+//   // We want uniform distribution from 1->FT_DURATION_CENTER*2
+//   // so that the mean is FT_DURATION_CENTER
+//   return 1+(rval%(FT_DURATION_CENTER_NS*2));
+
+   return timeGranularity_ns;
+}
+  
+
+MFBT_API TimeStamp
+TimeStamp::Now_fuzzy(uint64_t currentTime_ns){
+  // Are we overdue to (maybe) update the time?
+  if(nextUpdate_ns < currentTime){
+    
+    // Are we setting up an update for the first time?
+    if(nextUpdate_ns == 0){
+      initFuzzyTime();
+    }
+    
+    // Next update check occurs at a random time in the future
+    nextUpdate_ns = currentTime+pickDuration_ns();
+
+    // This may NOT result in a change to canonicalTime
+    canonicalTime_ns = roundTime(currentTime);
+  }
+
+  return TimeStamp(canonicalTime_ns);
+}
+
+  /** Stop Fuzzy Time stuff **/
+  
 void
 TimeStamp::RecordProcessRestart()
 {
