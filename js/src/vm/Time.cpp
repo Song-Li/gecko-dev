@@ -11,6 +11,10 @@
 #include "mozilla/DebugOnly.h"
 #include "mozilla/MathAlgorithms.h"
 
+/* CSE403-BEGIN : include counter.h*/
+#include "vm/Counter.h"
+/* CSE403-END */
+
 #ifdef SOLARIS
 #define _REENTRANT 1
 #endif
@@ -47,6 +51,10 @@ using mozilla::DebugOnly;
 int64_t
 PRMJ_Now()
 {
+/* CSE403-BEGIN : include counter.h */
+	return (int64_t)get_counter();
+/* CSE403-END */
+
     struct timeval tv;
 
 #ifdef _SVID_GETTOD   /* Defined only on Solaris, see Solaris <sys/types.h> */
@@ -153,6 +161,10 @@ PRMJ_NowShutdown()
 int64_t
 PRMJ_Now()
 {
+/* CSE403-BEGIN : include counter.h */
+		return (int64_t)get_counter();
+/* CSE403-END */
+
     if (pGetSystemTimePreciseAsFileTime) {
         // Windows 8 has a new API function that does all the work.
         FILETIME ft;

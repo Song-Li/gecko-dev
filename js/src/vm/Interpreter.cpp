@@ -57,6 +57,14 @@
 #include "vm/Probes-inl.h"
 #include "vm/Stack-inl.h"
 
+/* CSE403-BEGIN : include counter.h*/
+#include "Counter.h"
+/* CSE403-END */
+
+/* SECLAB-BEGIN Chen Zhanhao 10/02/2016 : include thread_priority_queue.h*/
+#include "thread_priority_queue.h"
+/* SECLAB-BEGIN-END*/
+
 using namespace js;
 using namespace js::gc;
 
@@ -65,6 +73,66 @@ using mozilla::DebugOnly;
 using mozilla::NumberEqualsInt32;
 using mozilla::PodCopy;
 using JS::ForOfIterator;
+
+/* SECLAB-BEGIN Chen Zhanhao 10/02/2016 : move Counter.cpp*/
+
+std::priority_queue<SecThread> secThreadQueue;
+
+void * pushSecThread(nsIThread * aThread,uint64_t expectedEndTime){
+    const SecThread secThread(aThread,expectedEndTime);
+    secThreadQueue.push(secThread);
+    return NULL;
+}
+
+const SecThread & getTopSecThread(){
+    const SecThread & secThread=secThreadQueue.top();
+    return secThread;
+}
+
+void * popSecThread(){
+    secThreadQueue.pop();
+    return NULL;
+}
+
+int sizeSecThread(){
+    return secThreadQueue.size();
+}
+
+bool operator < (const SecThread & thread1, const SecThread & thread2){
+  return thread1.expectedEndTime>thread2.expectedEndTime;
+}
+
+volatile uint64_t counter = 0;
+
+void * inc_counter(void * args) {
+
+    //uint64_t expectedEndTime = secThreadQueue.top().expectedEndTime;
+    uint64_t expectedEndTime = getTopSecThread().expectedEndTime;
+    //if(expectedEndTime<=get_counter()){}
+    while(expectedEndTime<=get_counter()){
+        expectedEndTime = getTopSecThread().expectedEndTime;
+    }
+
+    uint64_t c = (uint64_t)args;
+    counter += c;
+    JS_COUNTER_LOG("counter %i inc %i", counter, c);
+    return NULL;
+}
+
+uint64_t get_counter(void) {
+    JS_COUNTER_LOG("counter : %i", __FUNCTION__, counter);
+    return counter;
+}
+
+void * reset_counter() {
+	counter = 1;
+	return NULL;
+}
+
+uint64_t get_scaled_counter(uint64_t args) {
+	return counter/args;
+}
+/* SECLAB-BEGIN-END*/
 
 template <bool Eq>
 static MOZ_ALWAYS_INLINE bool
@@ -1639,12 +1707,17 @@ Interpret(JSContext* cx, RunState& state)
      * will enable interrupts, and activation.opMask() is or'd with the opcode
      * to implement a simple alternate dispatch.
      */
+/* CSE403-BEGIN : add counter*/
+/* SECLAB-BEGIN Chen Zhanaho 10/02/2016 : JS wait*/
 #define ADVANCE_AND_DISPATCH(N)                                               \
     JS_BEGIN_MACRO                                                            \
         REGS.pc += (N);                                                       \
+        inc_counter((void *)1);												  \
         SANITY_CHECKS();                                                      \
         DISPATCH_TO(*REGS.pc | activation.opMask());                          \
     JS_END_MACRO
+/* SECLAB-END Chen Zhanaho 10/02/2016*/
+/* CSE403-END*/
 
    /*
     * Shorthand for the common sequence at the end of a fixed-size opcode.
