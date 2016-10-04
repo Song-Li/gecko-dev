@@ -28,9 +28,10 @@ class SecThread{
 
 extern std::priority_queue<SecThread> secThreadQueue;
 
-void * pushSecThread(nsIThread * aThread,uint64_t expectedEndTime);
+void pushSecThread(nsIThread * aThread,uint64_t expectedEndTime);
 const SecThread & getTopSecThread();
-void * popSecThread();
+void popSecThread();
+bool isEmpty();
 int sizeSecThread();
 /*
 std::priority_queue<SecThread> secThreadQueue;

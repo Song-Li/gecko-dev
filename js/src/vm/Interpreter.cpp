@@ -61,9 +61,9 @@
 #include "Counter.h"
 /* CSE403-END */
 
-/* SECLAB-BEGIN Chen Zhanhao 10/02/2016 : include thread_priority_queue.h*/
+/*SECLAB-BEGIN Chen Zhanhao 10/02/2016 : include thread_priority_queue.h*/
 #include "thread_priority_queue.h"
-/* SECLAB-BEGIN-END*/
+/*SECLAB-BEGIN-END*/
 
 using namespace js;
 using namespace js::gc;
@@ -74,14 +74,13 @@ using mozilla::NumberEqualsInt32;
 using mozilla::PodCopy;
 using JS::ForOfIterator;
 
-/* SECLAB-BEGIN Chen Zhanhao 10/02/2016 : move Counter.cpp*/
+/*SECLAB-BEGIN Chen Zhanhao 10/02/2016 : move Counter.cpp*/
 
 std::priority_queue<SecThread> secThreadQueue;
 
-void * pushSecThread(nsIThread * aThread,uint64_t expectedEndTime){
+void pushSecThread(nsIThread * aThread,uint64_t expectedEndTime){
     const SecThread secThread(aThread,expectedEndTime);
     secThreadQueue.push(secThread);
-    return NULL;
 }
 
 const SecThread & getTopSecThread(){
@@ -89,9 +88,12 @@ const SecThread & getTopSecThread(){
     return secThread;
 }
 
-void * popSecThread(){
-    secThreadQueue.pop();
-    return NULL;
+bool isEmpty(){
+    return secThreadQueue.empty();
+}
+
+void popSecThread(){
+    if(!secThreadQueue.empty())secThreadQueue.pop();
 }
 
 int sizeSecThread(){
@@ -107,11 +109,15 @@ volatile uint64_t counter = 0;
 void * inc_counter(void * args) {
 
     //uint64_t expectedEndTime = secThreadQueue.top().expectedEndTime;
-    uint64_t expectedEndTime = getTopSecThread().expectedEndTime;
-    //if(expectedEndTime<=get_counter()){}
-    while(expectedEndTime<=get_counter()){
-        expectedEndTime = getTopSecThread().expectedEndTime;
-    }
+    /*if(!isEmpty()){
+        uint64_t expectedEndTime = getTopSecThread().expectedEndTime;
+        printf("JS wait for %d threads ",sizeSecThread());
+        printf("at %d\n",get_counter());
+        while(expectedEndTime<=get_counter()){
+            //expectedEndTime++;
+            expectedEndTime = getTopSecThread().expectedEndTime;
+        }
+    }*/
 
     uint64_t c = (uint64_t)args;
     counter += c;
@@ -132,7 +138,7 @@ void * reset_counter() {
 uint64_t get_scaled_counter(uint64_t args) {
 	return counter/args;
 }
-/* SECLAB-BEGIN-END*/
+/*SECLAB-END*/
 
 template <bool Eq>
 static MOZ_ALWAYS_INLINE bool
@@ -1708,7 +1714,6 @@ Interpret(JSContext* cx, RunState& state)
      * to implement a simple alternate dispatch.
      */
 /* CSE403-BEGIN : add counter*/
-/* SECLAB-BEGIN Chen Zhanaho 10/02/2016 : JS wait*/
 #define ADVANCE_AND_DISPATCH(N)                                               \
     JS_BEGIN_MACRO                                                            \
         REGS.pc += (N);                                                       \
@@ -1716,7 +1721,6 @@ Interpret(JSContext* cx, RunState& state)
         SANITY_CHECKS();                                                      \
         DISPATCH_TO(*REGS.pc | activation.opMask());                          \
     JS_END_MACRO
-/* SECLAB-END Chen Zhanaho 10/02/2016*/
 /* CSE403-END*/
 
    /*

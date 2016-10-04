@@ -37,6 +37,14 @@
 #include "nsThreadSyncDispatch.h"
 #include "LeakRefPtr.h"
 
+/*SECLAB-BEGIN Chen Zhanhao 10/03/2016*/
+#include <sys/time.h>
+#include "nsThreadUtils.h"
+# include "nsIThreadManager.h"
+# include "../../js/src/vm/Counter.h"
+# include "../../js/src/vm/thread_priority_queue.h"
+/*SECLAB-END*/
+
 #ifdef MOZ_CRASHREPORTER
 #include "nsServiceManagerUtils.h"
 #include "nsICrashReporter.h"
@@ -357,6 +365,16 @@ public:
   {
     mThread->mShutdownContext = mShutdownContext;
     MessageLoop::current()->Quit();
+
+    /*SECLAB-BEGIN Chen Zhanhao 10/03/2016 wait according to expectedEndTime*/
+    /*uint64_t presentTime=get_counter();
+    while(presentTime<mThread->expectedEndTime){
+      presentTime=get_counter();
+    }
+    printf("pop:at %d,%d\n",mThread->expectedEndTime,presentTime);
+    popSecThread();*/
+    /*SECLAB-END*/
+
     return NS_OK;
   }
 private:
@@ -619,6 +637,7 @@ nsThread::~nsThread()
 nsresult
 nsThread::Init()
 {
+
   // spawn thread and wait until it is fully setup
   RefPtr<nsThreadStartupEvent> startup = new nsThreadStartupEvent();
 
@@ -651,6 +670,25 @@ nsThread::Init()
 nsresult
 nsThread::InitCurrentThread()
 {
+
+  /*SECLAB-BEGIN Chen Zhanhao 10/03/2016 push queue before run thread*/
+  /*if (mIsMainThread != MAIN_THREAD&&get_counter()>0) {
+    nsCOMPtr<nsIThread> current;
+    NS_GetCurrentThread(getter_AddRefs(current));
+    nsIThread* aThread = current.get();
+
+    PRThread* currentThread = PR_GetCurrentThread();
+
+    uint64_t beginTime_us=get_counter();
+
+    expectedEndTime=beginTime_us+1000;
+
+    printf("push:at %d,%d\n",beginTime_us,expectedEndTime);
+
+    //pushSecThread(aThread,expectedEndTime);
+  }*/
+  /*SECLAB-END*/
+
   mThread = PR_GetCurrentThread();
   SetupCurrentThreadForChaosMode();
 

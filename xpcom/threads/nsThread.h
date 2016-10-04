@@ -213,6 +213,10 @@ protected:
   uint32_t  mNestedEventLoopDepth;
   uint32_t  mStackSize;
 
+  /*SECLAB_BEGIN Chen Zhanhao 10/03/2016 add expectedEndTime*/
+  uint64_t expectedEndTime;
+  /*SECLAB_END*/
+
   // The shutdown context for ourselves.
   struct nsThreadShutdownContext* mShutdownContext;
   // The shutdown contexts for any other threads we've asked to shut down.

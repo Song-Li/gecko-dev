@@ -36,13 +36,13 @@
 
 #include "MessagePump.h"
 
-//SECLAB 18:38 09/30/2016
+/*SECLAB-BEGIN Chen Zhanhao 09/30/2016*/
 #include <sys/time.h>
 #include "nsThreadUtils.h"
 # include "nsIThreadManager.h"
 # include "../../../../js/src/vm/Counter.h"
 # include "../../../../js/src/vm/thread_priority_queue.h"
-//SECLAB 18:38 09/30/2016
+/*SECLAB-END*/
 
 using base::Time;
 using base::TimeDelta;
@@ -230,26 +230,36 @@ void MessageLoop::RunHandler() {
   }
 #endif
 
-  //SECLAB 18:38 09/30/2016
-  nsCOMPtr<nsIThread> current;
+  /*SECLAB-BEGIN Chen Zhanhao 09/30/2016 push queue before run thread*/
+  /*nsCOMPtr<nsIThread> current;
   NS_GetCurrentThread(getter_AddRefs(current));
   nsIThread* aThread = current.get();
 
   timeval tv;
   gettimeofday(&tv,NULL);
-  //uint64_t beginTime_us=tv.tv_usec + (1000000*tv.tv_sec);
+
   uint64_t beginTime_us=get_counter();
 
-  uint64_t expectedEndTime=beginTime_us+10000;
+  uint64_t expectedEndTime=beginTime_us+1000;
 
   //aThread->expectedEndTime=expectedEndTime;
 
-  pushSecThread(aThread,expectedEndTime);
+  printf("push:at %d,%d\n",beginTime_us,expectedEndTime);
 
-  //printf("%ld\n",aThread->expectedEndTime);
-  //SECLAB 18:38 09/30/2016
+  pushSecThread(aThread,expectedEndTime);*/
+
+  /*SECLAB-END*/
 
   RunInternal();
+
+  /*SECLAB-BEGIN Chen Zhanhao 10/03/2016 wait according to expectedEndTime*/
+  /*uint64_t presentTime=get_counter();
+  while(presentTime<getTopSecThread().expectedEndTime){
+    presentTime=get_counter();
+  }
+  printf("pop:at %d,%d\n",presentTime,getTopSecThread().expectedEndTime);
+  popSecThread();*/
+  /*SECLAB-END*/
 }
 
 //------------------------------------------------------------------------------

@@ -262,6 +262,10 @@ protected:
     virtual ~nsHttpChannel();
 
 private:
+    /*seclab*/
+    uint64_t expectedEndTime;
+    /*seclab*/
+
     typedef nsresult (nsHttpChannel::*nsContinueRedirectionFunc)(nsresult result);
 
     bool     RequestIsConditional();

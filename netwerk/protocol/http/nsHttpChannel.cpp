@@ -101,6 +101,14 @@
 #include "mozilla/net/Predictor.h"
 #include "CacheControlParser.h"
 
+/*SECLAB-BEGIN Chen Zhanhao 10/03/2016*/
+#include <sys/time.h>
+#include "nsThreadUtils.h"
+# include "nsIThreadManager.h"
+# include "../../../js/src/vm/Counter.h"
+# include "../../../js/src/vm/thread_priority_queue.h"
+/*SECLAB-END*/
+
 namespace mozilla { namespace net {
 
 namespace {
@@ -278,6 +286,18 @@ nsHttpChannel::nsHttpChannel()
 
 nsHttpChannel::~nsHttpChannel()
 {
+    /*SECLAB-BEGIN Chen Zhanhao 10/03/2016 wait according to expectedEndTime*/
+    uint64_t presentTime=get_counter();
+    while(presentTime<expectedEndTime){
+      presentTime=get_counter();
+      //printf("present: %d\n",presentTime);
+    }
+    printf("http pop:at %d\n",presentTime);
+    //printf("http pop:at %d\n",get_counter());
+    popSecThread();
+    printf("size:at %d\n",sizeSecThread());
+    /*SECLAB-END*/
+
     LOG(("Destroying nsHttpChannel [this=%p]\n", this));
 
     if (mAuthProvider)
@@ -2866,7 +2886,7 @@ nsHttpChannel::IsResumable(int64_t partialLen, int64_t contentLength,
     bool hasContentEncoding =
         mCachedResponseHead->HasHeader(nsHttp::Content_Encoding);
 
-    nsAutoCString etag; 
+    nsAutoCString etag;
     mCachedResponseHead->GetHeader(nsHttp::ETag, etag);
     bool hasWeakEtag = !etag.IsEmpty() &&
                        StringBeginsWith(etag, NS_LITERAL_CSTRING("W/"));
@@ -5655,6 +5675,20 @@ nsHttpChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
     // that to complete would mean we don't include proxy resolution in the
     // timing.
     mAsyncOpenTime = TimeStamp::Now();
+
+    /*SECLAB-BEGIN Chen Zhanhao 10/03/2016 push queue before run thread*/
+    nsCOMPtr<nsIThread> current;
+    NS_GetCurrentThread(getter_AddRefs(current));
+    nsIThread* aThread = current.get();
+
+    uint64_t beginTime_us=get_counter();
+
+    expectedEndTime=beginTime_us+10;
+
+    printf("http push to end at %d\n",expectedEndTime);
+
+    pushSecThread(aThread,expectedEndTime);
+    /*SECLAB-END*/
 
     // Remember we have Authorization header set here.  We need to check on it
     // just once and early, AsyncOpen is the best place.
