@@ -40,6 +40,7 @@ nsEventQueue::~nsEventQueue()
   }
 }
 
+
 bool
 nsEventQueue::GetEvent(bool aMayWait, nsIRunnable** aResult,
                        MutexAutoLock& aProofOfLock)
@@ -55,6 +56,8 @@ nsEventQueue::GetEvent(bool aMayWait, nsIRunnable** aResult,
     mEventsAvailable.Wait();
     LOG(("EVENTQ(%p): wait end\n", this));
   }
+
+  GetRunNow();
 
   if (aResult) {
     MOZ_ASSERT(mOffsetHead < EVENTS_PER_PAGE);
@@ -80,6 +83,11 @@ void
 nsEventQueue::PutEvent(already_AddRefed<nsIRunnable>&& aRunnable,
                        MutexAutoLock& aProofOfLock)
 {
+  //SECLAB Thu 13 Oct 2016 03:08:32 PM EDT START
+  nsIRunnable* runnable = aRunnable.take();
+  //runnable->expTime = secCounter ++;
+  //SECLAB Thu 13 Oct 2016 03:09:04 PM EDT END
+  //
   if (!mHead) {
     mHead = NewPage();
     MOZ_ASSERT(mHead);
@@ -98,7 +106,9 @@ nsEventQueue::PutEvent(already_AddRefed<nsIRunnable>&& aRunnable,
 
   nsIRunnable*& queueLocation = mTail->mEvents[mOffsetTail];
   MOZ_ASSERT(!queueLocation);
-  queueLocation = aRunnable.take();
+  //SECLAB Thu 13 Oct 2016 03:09:17 PM EDT START
+  queueLocation = runnable;
+  //SECLAB Thu 13 Oct 2016 03:09:24 PM EDT END
   ++mOffsetTail;
   LOG(("EVENTQ(%p): notify\n", this));
   mEventsAvailable.Notify();

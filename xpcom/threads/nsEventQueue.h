@@ -56,6 +56,57 @@ public:
   size_t Count(MutexAutoLock&);
 
 private:
+//SECLAB Thu 13 Oct 2016 02:55:25 PM EDT START
+
+  long long int secCounter = 0;
+  void GetRunNow() {
+    if(IsEmpty()) return ;
+    Page* head = mHead, *tail = mTail, *nextRun = NULL;
+    uint16_t offset = -1;
+    int first_end = 0;
+    unsigned int minExpTime = 2147483648;// larger than the normal int
+    printf("%d headheadhead\n", mHead->mEvents[mOffsetHead]->expTime);
+
+    if(head != tail) first_end = EVENTS_PER_PAGE;
+    else first_end = mOffsetTail;
+    for(int i = mOffsetHead;i < first_end;++ i){
+      if(head->mEvents[i]->expTime < minExpTime && head->mEvents[i]->expTime >= 0){
+        nextRun = head;
+        offset = i;
+        minExpTime = head->mEvents[i]->expTime;
+      }
+    }
+
+    if(head != tail) head = head->mNext;
+
+    while(head != tail) {
+      for(int i = 0;i < EVENTS_PER_PAGE;++ i)
+        if(head->mEvents[i]->expTime < minExpTime && head->mEvents[i]->expTime >= 0){
+          nextRun = head;
+          offset = i;
+          minExpTime = head->mEvents[i]->expTime;
+        }
+      head = head->mNext;
+    }
+
+    if(mHead != mTail) {
+      for(int i = 0;i < mOffsetTail;++ i) {
+        if(tail->mEvents[i]->expTime < minExpTime && tail->mEvents[i]->expTime >= 0){
+          nextRun = tail;
+          offset = i;
+          minExpTime = head->mEvents[i]->expTime;
+        }
+      }
+    }
+
+    if(nextRun != mHead || offset != mOffsetHead) 
+      printf("Error %lld %lld %d %d\n", mHead->mEvents[mOffsetHead]->expTime, nextRun->mEvents[offset]->expTime, offset, mOffsetHead);
+
+    nsIRunnable* tmp = mHead->mEvents[mOffsetHead];
+    mHead->mEvents[mOffsetHead] = nextRun->mEvents[offset];
+    nextRun->mEvents[offset] = tmp;
+  }
+  //SECLAB Thu 13 Oct 2016 02:55:29 PM EDT END
   bool IsEmpty()
   {
     return !mHead || (mHead == mTail && mOffsetHead == mOffsetTail);
@@ -75,7 +126,7 @@ private:
   };
 
   static_assert((sizeof(Page) & (sizeof(Page) - 1)) == 0,
-                "sizeof(Page) should be a power of two to avoid heap slop.");
+      "sizeof(Page) should be a power of two to avoid heap slop.");
 
   static Page* NewPage()
   {
