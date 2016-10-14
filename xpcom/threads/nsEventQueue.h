@@ -64,8 +64,8 @@ private:
     Page* head = mHead, *tail = mTail, *nextRun = NULL;
     uint16_t offset = -1;
     int first_end = 0;
-    unsigned int minExpTime = 2147483648;// larger than the normal int
-    printf("%d headheadhead\n", mHead->mEvents[mOffsetHead]->expTime);
+    uint64_t minExpTime = 2147483648;// larger than the normal int
+    //printf("%lld headheadhead\n", mHead->mEvents[mOffsetHead]->expTime);
 
     if(head != tail) first_end = EVENTS_PER_PAGE;
     else first_end = mOffsetTail;
@@ -102,6 +102,7 @@ private:
     if(nextRun != mHead || offset != mOffsetHead) 
       printf("Error %lld %lld %d %d\n", mHead->mEvents[mOffsetHead]->expTime, nextRun->mEvents[offset]->expTime, offset, mOffsetHead);
 
+    return ;
     nsIRunnable* tmp = mHead->mEvents[mOffsetHead];
     mHead->mEvents[mOffsetHead] = nextRun->mEvents[offset];
     nextRun->mEvents[offset] = tmp;
