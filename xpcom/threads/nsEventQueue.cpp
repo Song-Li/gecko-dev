@@ -108,8 +108,8 @@ nsEventQueue::PutEvent(already_AddRefed<nsIRunnable>&& aRunnable,
   
   //SECLAB Mon 17 Oct 2016 07:15:31 PM EDT START
   //mTail->flag[mOffsetTail] = false;
-  if(rand() % 128 == 1) mTail->mExpTime[mOffsetTail] = curTime --;
-  else mTail->mExpTime[mOffsetTail] = 1;
+  //if(rand() % 128 == 1) mTail->mExpTime[mOffsetTail] = curTime --;
+  mTail->mExpTime[mOffsetTail] = 1;
   //SECLAB Mon 17 Oct 2016 07:16:22 PM EDT END
 
 
@@ -121,6 +121,22 @@ nsEventQueue::PutEvent(already_AddRefed<nsIRunnable>&& aRunnable,
   LOG(("EVENTQ(%p): notify\n", this));
   mEventsAvailable.Notify();
 }
+
+//SECLAB Tue 18 Oct 2016 11:36:03 AM EDT START
+bool
+nsEventQueue::SecSwapRunnable(nsIRunnable* runnable, const uint64_t expTime, MutexAutoLock& aProofOfLock) {
+  nsIRunnable** queueLocation = GetFlag(expTime << 1 | 1);
+  if(queueLocation) {
+    *queueLocation = runnable;
+    return true;
+  }
+  else {
+    PutEvent(runnable, aProofOfLock);
+    return false;
+  }
+
+}
+//SECLAB Tue 18 Oct 2016 11:39:30 AM EDT END
 
 void
 nsEventQueue::PutEvent(nsIRunnable* aRunnable, MutexAutoLock& aProofOfLock)
