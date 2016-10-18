@@ -156,6 +156,10 @@ protected:
     {
       mQueue.PutEvent(mozilla::Move(aEvent), aProofOfLock,expectedEndTime);
     }
+
+    bool SecSwapRunnable(nsIRunnable* runnable, uint64_t expTime, mozilla::MutexAutoLock& aProofOfLock){
+      return mQueue.SecSwapRunnable(runnable, expTime, aProofOfLock);
+    }
     //SECLAB END
 
     bool GetEvent(bool aMayWait, nsIRunnable** aEvent,

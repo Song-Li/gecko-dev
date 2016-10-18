@@ -685,16 +685,23 @@ nsThread::PutEvent(already_AddRefed<nsIRunnable> aEvent, nsNestedEventTarget* aT
     MutexAutoLock lock(mLock);
     nsChainedEventQueue* queue = aTarget ? aTarget->mQueue : &mEventsRoot;
 
-    //SECLAB BEGIN 10/10/2016
-    const char *threadName=NULL;
-    const char *presentName=NULL;
-    presentName=PR_GetThreadName(PR_GetCurrentThread());
+    //SECLAB BEGIN 10/10/2016 put event
+    //const char *threadName=NULL;
+    //const char *presentName=NULL;
+    //presentName=PR_GetThreadName(PR_GetCurrentThread());
 
     uint64_t expectedEndTime=0;
 
+    /*if(expTime==0){
+      expTime = get_counter();
+      expTime = expTime << 1;
+    }*/
+
     if(NS_IsMainThread()){
       // Main thread put event to other threads
+      //printf("Main thread\n");
       if(aTarget){
+        printf("Main thread put event to other threads\n");
         expectedEndTime = get_counter()+10000;
         expectedEndTime = (expectedEndTime << 1) | 1;
         //push flag event
@@ -708,6 +715,7 @@ nsThread::PutEvent(already_AddRefed<nsIRunnable> aEvent, nsNestedEventTarget* aT
       else if(expTime>0){
         // Main thread is waiting
         if(flag && flagTime==expTime){
+            printf("Main thread is waiting\n");
             flagEvent=event.get();
             flag=false;
             put=false;
@@ -715,6 +723,9 @@ nsThread::PutEvent(already_AddRefed<nsIRunnable> aEvent, nsNestedEventTarget* aT
         // swap flag event
         else{
           //swap flag
+          printf("swap flag\n");
+          mEventsRoot.SecSwapRunnable(event.get(),expTime,lock);
+          put=false;
         }
       }
     }
@@ -1116,21 +1127,28 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
         HangMonitor::NotifyActivity();
       }
 
-      //SECLAB BEGIN 10/14/2016
+      //SECLAB BEGIN 10/14/2016 seclab next event
       if(NS_IsMainThread()){
         flag=*expectedEndTime & 1;
+        //if(*expectedEndTime!=0)printf("------%ld\n",*expectedEndTime);
         *expectedEndTime=*expectedEndTime>>1;
-        if(flag){
+        //if(*expectedEndTime!=0)printf("%ld\n",*expectedEndTime);
+        if(flag && *expectedEndTime > 0){
           flagEvent=event.get();
           flagTime=*expectedEndTime;
           printf("isFlag\n");
-          while(flag);
+          while(flag){
+            printf("lock at %ld\n",flagTime);
+            //if(get_counter()-*expectedEndTime>100000)break;
+          }
+          printf("breakFlag\n");
           event=flagEvent;
           flagEvent=NULL;
           if(*expectedEndTime>get_counter())set_counter(*expectedEndTime);
         }
       }
       else{
+        expTime=0;
         if(*expectedEndTime>0)expTime=*expectedEndTime;
       }
 
