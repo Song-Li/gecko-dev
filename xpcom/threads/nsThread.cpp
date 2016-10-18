@@ -37,6 +37,12 @@
 #include "nsThreadSyncDispatch.h"
 #include "LeakRefPtr.h"
 
+//SECLAB BEGIN 10/03/2016
+#include "nsThreadUtils.h"
+# include "../../js/src/vm/Counter.h"
+#include "../../docshell/base/nsDocShell.h"
+//SECLAB END
+
 #ifdef MOZ_CRASHREPORTER
 #include "nsServiceManagerUtils.h"
 #include "nsICrashReporter.h"
@@ -673,14 +679,61 @@ nsThread::PutEvent(already_AddRefed<nsIRunnable> aEvent, nsNestedEventTarget* aT
   LeakRefPtr<nsIRunnable> event(Move(aEvent));
   nsCOMPtr<nsIThreadObserver> obs;
 
+  bool put=true;
+
   {
     MutexAutoLock lock(mLock);
     nsChainedEventQueue* queue = aTarget ? aTarget->mQueue : &mEventsRoot;
+
+    //SECLAB BEGIN 10/10/2016
+    const char *threadName=NULL;
+    const char *presentName=NULL;
+    presentName=PR_GetThreadName(PR_GetCurrentThread());
+
+    uint64_t expectedEndTime=0;
+
+    if(NS_IsMainThread()){
+      // Main thread put event to other threads
+      if(aTarget){
+        expectedEndTime = get_counter()+10000;
+        expectedEndTime = (expectedEndTime << 1) | 1;
+        //push flag event
+        if (!mEventsAreDoomed) {
+          nsIRunnable* newFlagEvent=new Runnable();
+          mEventsRoot.PutEvent(event.take(), lock, expectedEndTime);
+        }
+      }
+
+      // Main thread put event to callback function push to main event queue
+      else if(expTime>0){
+        // Main thread is waiting
+        if(flag && flagTime==expTime){
+            flagEvent=event.get();
+            flag=false;
+            put=false;
+        }
+        // swap flag event
+        else{
+          //swap flag
+        }
+      }
+    }
+    else{
+      expectedEndTime=expTime;
+      expTime=0;
+    }
+
+    //SECLAB END
+
     if (!queue || (queue == &mEventsRoot && mEventsAreDoomed)) {
       NS_WARNING("An event was posted to a thread that will never run it (rejected)");
       return NS_ERROR_UNEXPECTED;
     }
-    queue->PutEvent(event.take(), lock);
+    //queue->PutEvent(event.take(), lock);
+
+    //SECLAN BEGIN 10/17/2016
+    if(put)queue->PutEvent(event.take(), lock, expectedEndTime);
+    //SECLAB END
 
     // Make sure to grab the observer before dropping the lock, otherwise the
     // event that we just placed into the queue could run and eventually delete
@@ -1042,10 +1095,17 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
     // also do work.
 
     // If we are shutting down, then do not wait for new events.
+    uint64_t* expectedEndTime=(uint64_t*) malloc(sizeof(uint64_t));
+
     nsCOMPtr<nsIRunnable> event;
     {
       MutexAutoLock lock(mLock);
-      mEvents->GetEvent(reallyWait, getter_AddRefs(event), lock);
+      //mEvents->GetEvent(reallyWait, getter_AddRefs(event), lock);
+
+      //SECLAB BEGIN 10/17/2016
+      mEvents->GetEvent(reallyWait, getter_AddRefs(event), lock, expectedEndTime);
+      //SECLAB END
+
     }
 
     *aResult = (event.get() != nullptr);
@@ -1055,6 +1115,27 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
       if (MAIN_THREAD == mIsMainThread) {
         HangMonitor::NotifyActivity();
       }
+
+      //SECLAB BEGIN 10/14/2016
+      if(NS_IsMainThread()){
+        flag=*expectedEndTime & 1;
+        *expectedEndTime=*expectedEndTime>>1;
+        if(flag){
+          flagEvent=event.get();
+          flagTime=*expectedEndTime;
+          printf("isFlag\n");
+          while(flag);
+          event=flagEvent;
+          flagEvent=NULL;
+          if(*expectedEndTime>get_counter())set_counter(*expectedEndTime);
+        }
+      }
+      else{
+        if(*expectedEndTime>0)expTime=*expectedEndTime;
+      }
+
+      //SECLAB END
+
       event->Run();
     } else if (aMayWait) {
       MOZ_ASSERT(ShuttingDown(),
@@ -1077,6 +1158,8 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
   }
 
   --mNestedEventLoopDepth;
+
+  expTime=0;
 
   return rv;
 }

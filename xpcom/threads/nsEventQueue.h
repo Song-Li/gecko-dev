@@ -33,6 +33,12 @@ public:
   void PutEvent(already_AddRefed<nsIRunnable>&& aEvent,
                 MutexAutoLock& aProofOfLock);
 
+  //SECLAB BEGIN 10/17/2016
+  void PutEvent(nsIRunnable* aEvent, MutexAutoLock& aProofOfLock, uint64_t expTime);
+  void PutEvent(already_AddRefed<nsIRunnable>&& aEvent,
+                MutexAutoLock& aProofOfLock, uint64_t expTime);
+  //SECLAB END
+
   // This method gets an event from the event queue.  If mayWait is true, then
   // the method will block the calling thread until an event is available.  If
   // the event is null, then the method returns immediately indicating whether
@@ -41,6 +47,11 @@ public:
   // not alter the reference count of the resulting event.
   bool GetEvent(bool aMayWait, nsIRunnable** aEvent,
                 MutexAutoLock& aProofOfLock);
+
+  //SECLAB BEGIN 10/17/2016
+  bool GetEvent(bool aMayWait, nsIRunnable** aEvent,
+                MutexAutoLock& aProofOfLock, uint64_t* expTime);
+  //SECLAB END
 
   // This method returns true if there is a pending event.
   bool HasPendingEvent(MutexAutoLock& aProofOfLock)

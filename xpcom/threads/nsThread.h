@@ -139,6 +139,25 @@ protected:
     {
     }
 
+    //SECLAB BEGIN 10/17/2016
+    bool GetEvent(bool aMayWait, nsIRunnable** aEvent,
+                  mozilla::MutexAutoLock& aProofOfLock, uint64_t* expectedEndTime)
+    {
+      return mQueue.GetEvent(aMayWait, aEvent, aProofOfLock, expectedEndTime);
+    }
+
+    void PutEvent(nsIRunnable* aEvent, mozilla::MutexAutoLock& aProofOfLock, uint64_t expectedEndTime)
+    {
+      mQueue.PutEvent(aEvent, aProofOfLock, expectedEndTime);
+    }
+
+    void PutEvent(already_AddRefed<nsIRunnable> aEvent,
+                  mozilla::MutexAutoLock& aProofOfLock, uint64_t expectedEndTime)
+    {
+      mQueue.PutEvent(mozilla::Move(aEvent), aProofOfLock,expectedEndTime);
+    }
+    //SECLAB END
+
     bool GetEvent(bool aMayWait, nsIRunnable** aEvent,
                   mozilla::MutexAutoLock& aProofOfLock)
     {
@@ -222,6 +241,13 @@ protected:
   // Set to true when events posted to this thread will never run.
   bool mEventsAreDoomed;
   MainThreadFlag mIsMainThread;
+
+  //SECLAB-BEGIN 10/14/2016
+  uint64_t expTime=0;
+  uint64_t flagTime=0;
+  bool flag=false;
+  nsIRunnable* flagEvent=NULL;
+  //SECLAB-END
 };
 
 #if defined(XP_UNIX) && !defined(ANDROID) && !defined(DEBUG) && HAVE_UALARM \
