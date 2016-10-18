@@ -52,6 +52,12 @@ public:
   bool GetEvent(bool aMayWait, nsIRunnable** aEvent,
                 MutexAutoLock& aProofOfLock, uint64_t* expTime);
   //SECLAB END
+  //SECLAB Tue 18 Oct 2016 11:19:12 AM EDT START
+  //This function is used for find a flag runnable and swap this flag runnable with a 
+  //real runnable. This function will work together with GetFlag() function
+  bool SecSwapRunnable(nsIRunnable* runnable, uint64_t expTime, MutexAutoLock& aProofOfLock);
+  //SECLAB Tue 18 Oct 2016 11:20:10 AM EDT END
+
 
   // This method returns true if there is a pending event.
   bool HasPendingEvent(MutexAutoLock& aProofOfLock)
@@ -68,6 +74,24 @@ public:
   size_t Count(MutexAutoLock&);
 
 private:
+  //SECLAB Tue 18 Oct 2016 11:23:11 AM EDT START
+  nsIRunnable** GetFlag(const uint64_t expTime) {
+    Page* head = mHead;
+    int offset = mOffsetHead;
+    while(head != mTail && offset != mOffsetTail) {
+      if(offset == EVENTS_PER_PAGE) {
+        offset = 0;
+        head = head->mNext;
+      }else {
+        if(head->mExpTime[offset] == expTime) {
+          return &(head->mEvents[offset]);
+        }
+        offset ++;
+      }
+    }
+    return NULL;
+  }
+  //SECLAB Tue 18 Oct 2016 11:39:38 AM EDT END
 //SECLAB Thu 13 Oct 2016 02:55:25 PM EDT START
 
   void GetRunNow() {
@@ -76,7 +100,7 @@ private:
     uint16_t offset = -1;
     int first_end = 0;
     uint64_t minExpTime = 2147483648;// larger than the normal int
-    //const bool debug = 1;
+    const bool debug = 0;
     std::vector<uint64_t > debugQueue;
     //printf("%lld headheadhead\n", mHead->mEvents[mOffsetHead]->expTime);
 
@@ -125,10 +149,12 @@ private:
       mHead->mExpTime[mOffsetHead] = nextRun->mExpTime[offset];
       nextRun->mExpTime[offset] = expTime;
 
-      for(auto it = debugQueue.begin(); it != debugQueue.end();++ it) {
-        printf("%lu ",*it);
+      if(debug) {
+        for(auto it = debugQueue.begin(); it != debugQueue.end();++ it) {
+          printf("%lu ",*it);
+        }
+        printf("Current %lu %lu \n", mHead->mExpTime[mOffsetHead], head->mExpTime[offset]);
       }
-      printf("Current %lu %lu \n", mHead->mExpTime[mOffsetHead], head->mExpTime[offset]);
     }
 
     //bool f = mHead->flag[mOffsetHead];
