@@ -8,6 +8,7 @@
 #define nsEventQueue_h__
 
 #include <stdlib.h>
+#include <vector>
 #include "mozilla/CondVar.h"
 #include "mozilla/Mutex.h"
 #include "nsIRunnable.h"
@@ -58,56 +59,75 @@ public:
 private:
 //SECLAB Thu 13 Oct 2016 02:55:25 PM EDT START
 
-  long long int secCounter = 0;
   void GetRunNow() {
     if(IsEmpty()) return ;
     Page* head = mHead, *tail = mTail, *nextRun = NULL;
     uint16_t offset = -1;
     int first_end = 0;
     uint64_t minExpTime = 2147483648;// larger than the normal int
+    //const bool debug = 1;
+    std::vector<uint64_t > debugQueue;
     //printf("%lld headheadhead\n", mHead->mEvents[mOffsetHead]->expTime);
 
     if(head != tail) first_end = EVENTS_PER_PAGE;
     else first_end = mOffsetTail;
     for(int i = mOffsetHead;i < first_end;++ i){
-      if(head->mEvents[i]->expTime < minExpTime && head->mEvents[i]->expTime >= 0){
+      debugQueue.push_back(head->mExpTime[i]);
+      if(head->mExpTime[i] < minExpTime){
         nextRun = head;
         offset = i;
-        minExpTime = head->mEvents[i]->expTime;
+        minExpTime = head->mExpTime[i];
       }
     }
 
     if(head != tail) head = head->mNext;
 
     while(head != tail) {
-      for(int i = 0;i < EVENTS_PER_PAGE;++ i)
-        if(head->mEvents[i]->expTime < minExpTime && head->mEvents[i]->expTime >= 0){
+      for(int i = 0;i < EVENTS_PER_PAGE;++ i){
+        debugQueue.push_back(head->mExpTime[i]);
+        if(head->mExpTime[i] < minExpTime){
           nextRun = head;
           offset = i;
-          minExpTime = head->mEvents[i]->expTime;
+          minExpTime = head->mExpTime[i];
         }
+      }
       head = head->mNext;
     }
 
     if(mHead != mTail) {
       for(int i = 0;i < mOffsetTail;++ i) {
-        if(tail->mEvents[i]->expTime < minExpTime && tail->mEvents[i]->expTime >= 0){
+        debugQueue.push_back(tail->mExpTime[i]);
+        if(tail->mExpTime[i] < minExpTime){
           nextRun = tail;
           offset = i;
-          minExpTime = head->mEvents[i]->expTime;
+          minExpTime = head->mExpTime[i];
         }
       }
     }
 
-    if(nextRun != mHead || offset != mOffsetHead) 
-      printf("Error %lld %lld %d %d\n", mHead->mEvents[mOffsetHead]->expTime, nextRun->mEvents[offset]->expTime, offset, mOffsetHead);
+    if(mHead != head || mOffsetHead != offset) {
+      nsIRunnable* tmp = mHead->mEvents[mOffsetHead];
+      mHead->mEvents[mOffsetHead] = nextRun->mEvents[offset];
+      nextRun->mEvents[offset] = tmp;
 
-    return ;
-    nsIRunnable* tmp = mHead->mEvents[mOffsetHead];
-    mHead->mEvents[mOffsetHead] = nextRun->mEvents[offset];
-    nextRun->mEvents[offset] = tmp;
+      int expTime = mHead->mExpTime[mOffsetHead];
+      mHead->mExpTime[mOffsetHead] = nextRun->mExpTime[offset];
+      nextRun->mExpTime[offset] = expTime;
+
+      for(auto it = debugQueue.begin(); it != debugQueue.end();++ it) {
+        printf("%lu ",*it);
+      }
+      printf("Current %lu %lu \n", mHead->mExpTime[mOffsetHead], head->mExpTime[offset]);
+    }
+
+    //bool f = mHead->flag[mOffsetHead];
+    //mHead->flag[mOffsetHead] = nextRun->flag[offset];
+    //nextRun->flag[offset] = t;
   }
   //SECLAB Thu 13 Oct 2016 02:55:29 PM EDT END
+
+  uint64_t curTime = 1e8;
+
   bool IsEmpty()
   {
     return !mHead || (mHead == mTail && mOffsetHead == mOffsetTail);
@@ -123,6 +143,11 @@ private:
   struct Page
   {
     struct Page* mNext;
+    //SECLAB Mon 17 Oct 2016 07:13:40 PM EDT START
+    //bool flag[EVENTS_PER_PAGE + 1];
+    uint64_t mExpTime[EVENTS_PER_PAGE + 1];
+    //SECLAB Mon 17 Oct 2016 07:13:43 PM EDT END
+
     nsIRunnable* mEvents[EVENTS_PER_PAGE];
   };
 

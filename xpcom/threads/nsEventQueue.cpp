@@ -105,6 +105,14 @@ nsEventQueue::PutEvent(already_AddRefed<nsIRunnable>&& aRunnable,
   }
 
   nsIRunnable*& queueLocation = mTail->mEvents[mOffsetTail];
+  
+  //SECLAB Mon 17 Oct 2016 07:15:31 PM EDT START
+  //mTail->flag[mOffsetTail] = false;
+  if(rand() % 128 == 1) mTail->mExpTime[mOffsetTail] = curTime --;
+  else mTail->mExpTime[mOffsetTail] = 1;
+  //SECLAB Mon 17 Oct 2016 07:16:22 PM EDT END
+
+
   MOZ_ASSERT(!queueLocation);
   //SECLAB Thu 13 Oct 2016 03:09:17 PM EDT START
   queueLocation = runnable;
