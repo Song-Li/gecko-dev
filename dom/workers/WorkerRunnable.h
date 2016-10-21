@@ -51,7 +51,7 @@ public:
 
   //SECLAB BEGIN 10/20/2016
   //using nsIRunnable::isFlag;
-  bool isFlag(){
+  bool isFlag() override{
     return false;
   }
   //SECLAB END

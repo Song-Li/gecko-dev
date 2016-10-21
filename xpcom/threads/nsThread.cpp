@@ -603,6 +603,7 @@ nsThread::nsThread(MainThreadFlag aMainThread, uint32_t aStackSize)
   , mShutdownRequired(false)
   , mEventsAreDoomed(false)
   , mIsMainThread(aMainThread)
+  , threadId(pthread_self())
 {
 }
 
@@ -697,7 +698,7 @@ nsThread::PutEvent(already_AddRefed<nsIRunnable> aEvent, nsNestedEventTarget* aT
       this->expTime = get_counter() << 1;
     }
 
-    if(pthread_self()==getJSThread()){
+    if(this->threadId==getJSThread()){
       // Main thread put event to other threads
       if(aTarget){
         //printf("%lx Main thread put event to other threads at %ld\n", pthread_self(),get_counter());
@@ -1138,7 +1139,7 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
       }
 
       //SECLAB BEGIN 10/14/2016 seclab next event
-      if(pthread_self()==getJSThread()){
+      /*if(pthread_self()==getJSThread()){
         //printf("main thread %x\n",pthread_self());
         //if(*expectedEndTime!=0)printf("%lx get %ld\n",pthread_self(),*expectedEndTime);
         //if(*expectedEndTime & 1)printf("get flag in main thread\n");
@@ -1167,11 +1168,16 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
         }
       }*/
 
+      uint64_t temExpTime;
+      if(this->threadId==getJSThread()){
+        this->expTime = get_counter()+1000;
+      }
+      else{
+
+      }
+      //if(event->isFlag())printf("get flag\n");
+
       //SECLAB END
-
-
-      if(event->isFlag())printf("get flag\n");
-      bool flagt=event->isFlag();
 
       event->Run();
     } else if (aMayWait) {
