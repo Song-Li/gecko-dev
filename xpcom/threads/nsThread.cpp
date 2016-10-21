@@ -692,7 +692,7 @@ nsThread::PutEvent(already_AddRefed<nsIRunnable> aEvent, nsNestedEventTarget* aT
     //const char *presentName=NULL;
     //presentName=PR_GetThreadName(PR_GetCurrentThread());
 
-    uint64_t expectedEndTime=0;
+    /*uint64_t expectedEndTime=0;
 
     if(this->expTime==0){
       this->expTime = get_counter() << 1;
@@ -702,12 +702,12 @@ nsThread::PutEvent(already_AddRefed<nsIRunnable> aEvent, nsNestedEventTarget* aT
       // Main thread put event to other threads
       if(aTarget){
         //printf("%lx Main thread put event to other threads at %ld\n", pthread_self(),get_counter());
-        /*expectedEndTime = get_counter()+10000;
+        expectedEndTime = get_counter()+10000;
         expectedEndTime = expectedEndTime << 1;
         //push flag event
         nsIRunnable* newFlagEvent=new Runnable();
         printf("put flag event to main thread %ld\n", expectedEndTime);
-        mEventsRoot.PutEvent(newFlagEvent, lock, expectedEndTime | 1);*/
+        mEventsRoot.PutEvent(newFlagEvent, lock, expectedEndTime | 1);
       }
 
       else{
@@ -732,14 +732,21 @@ nsThread::PutEvent(already_AddRefed<nsIRunnable> aEvent, nsNestedEventTarget* aT
           mEventsRoot.SecSwapRunnable(event.get(),expTime,lock);
           put=false;
         }
-      }*/
+      }
     }
     else{
       //if(aTarget)printf("%lx non Main thread put event to other non main thread %ld\n", pthread_self(), get_counter());
       //else printf("%lx non Main thread put event to itself %ld\n", pthread_self(), get_counter());
       //if(expTime>0)printf("nonMain thread put %ld to nonMain thread\n",expTime);
       /*expectedEndTime=expTime;
-      expTime=0;*/
+      expTime=0;
+    }*/
+
+    uint64_t temExpTime;
+
+    nsIThread* currentIThread = NS_GetCurrentThread();
+    if(this->threadId != getJSThread()){
+      //this->expTime =
     }
 
     //SECLAB END
@@ -751,7 +758,7 @@ nsThread::PutEvent(already_AddRefed<nsIRunnable> aEvent, nsNestedEventTarget* aT
     //queue->PutEvent(event.take(), lock);
 
     //SECLAN BEGIN 10/17/2016
-    if(put)queue->PutEvent(event.take(), lock, expectedEndTime);
+    if(put)queue->PutEvent(event.take(), lock, temExpTime);
     //SECLAB END
 
     // Make sure to grab the observer before dropping the lock, otherwise the
@@ -1117,7 +1124,7 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
     // also do work.
 
     // If we are shutting down, then do not wait for new events.
-    uint64_t* expectedEndTime=(uint64_t*) malloc(sizeof(uint64_t));
+    uint64_t* temExpTime=(uint64_t*) malloc(sizeof(uint64_t));
 
     nsCOMPtr<nsIRunnable> event;
     {
@@ -1125,7 +1132,7 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
       //mEvents->GetEvent(reallyWait, getter_AddRefs(event), lock);
 
       //SECLAB BEGIN 10/17/2016
-      mEvents->GetEvent(reallyWait, getter_AddRefs(event), lock, expectedEndTime);
+      mEvents->GetEvent(reallyWait, getter_AddRefs(event), lock, temExpTime);
       //SECLAB END
 
     }
@@ -1173,7 +1180,7 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
         this->expTime = get_counter()+1000;
       }
       else{
-
+        this->expTime = temExpTime;
       }
       //if(event->isFlag())printf("get flag\n");
 
