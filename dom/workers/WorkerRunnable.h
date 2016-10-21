@@ -51,10 +51,9 @@ public:
 
   //SECLAB BEGIN 10/20/2016
   bool isFlag() override{
-    return true;
+    return false;
   }
 
-  uint64_t expTime=0;
   //SECLAB END
 
 protected:

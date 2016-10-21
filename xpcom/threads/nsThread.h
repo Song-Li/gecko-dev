@@ -38,6 +38,9 @@ public:
   NS_DECL_NSISUPPORTSPRIORITY
   using nsIEventTarget::Dispatch;
 
+  uint64_t expTime=0;
+  uint64_t threadId;
+
   enum MainThreadFlag
   {
     MAIN_THREAD,
@@ -247,7 +250,6 @@ protected:
   MainThreadFlag mIsMainThread;
 
   //SECLAB-BEGIN 10/14/2016
-  uint64_t expTime=0;
   uint64_t flagTime=0;
   bool flag=false;
   nsIRunnable* flagEvent=NULL;
