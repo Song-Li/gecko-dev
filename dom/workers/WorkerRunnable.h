@@ -49,6 +49,13 @@ public:
     WorkerThreadUnchangedBusyCount
   };
 
+  //SECLAB BEGIN 10/20/2016
+  using nsIRunnable::isFlag;
+  bool isFlag(){
+    return false;
+  }
+  //SECLAB END
+
 protected:
   // The WorkerPrivate that this runnable is associated with.
   WorkerPrivate* mWorkerPrivate;

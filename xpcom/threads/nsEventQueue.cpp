@@ -125,13 +125,14 @@ nsEventQueue::PutEvent(already_AddRefed<nsIRunnable>&& aRunnable,
 //SECLAB Tue 18 Oct 2016 11:36:03 AM EDT START
 bool
 nsEventQueue::SecSwapRunnable(nsIRunnable* runnable, const uint64_t expTime, MutexAutoLock& aProofOfLock) {
-  nsIRunnable** queueLocation = GetFlag(expTime << 1 | 1);
+  nsIRunnable** queueLocation = GetFlag(expTime | 1);
   if(queueLocation) {
+    printf("swap: %ld\n",expTime);
     *queueLocation = runnable;
     return true;
   }
   else {
-    PutEvent(runnable, aProofOfLock);
+    PutEvent(runnable, aProofOfLock, expTime);
     return false;
   }
 

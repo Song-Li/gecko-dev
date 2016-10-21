@@ -39,8 +39,9 @@
 
 //SECLAB BEGIN 10/03/2016
 #include "nsThreadUtils.h"
-# include "../../js/src/vm/Counter.h"
+#include "../../js/src/vm/Counter.h"
 #include "../../docshell/base/nsDocShell.h"
+#include <typeinfo>
 //SECLAB END
 
 #ifdef MOZ_CRASHREPORTER
@@ -692,46 +693,52 @@ nsThread::PutEvent(already_AddRefed<nsIRunnable> aEvent, nsNestedEventTarget* aT
 
     uint64_t expectedEndTime=0;
 
-    /*if(expTime==0){
-      expTime = get_counter();
-      expTime = expTime << 1;
-    }*/
+    if(this->expTime==0){
+      this->expTime = get_counter() << 1;
+    }
 
-    if(NS_IsMainThread()){
+    if(pthread_self()==getJSThread()){
       // Main thread put event to other threads
-      //printf("Main thread\n");
       if(aTarget){
-        printf("Main thread put event to other threads\n");
-        expectedEndTime = get_counter()+10000;
-        expectedEndTime = (expectedEndTime << 1) | 1;
+        //printf("%lx Main thread put event to other threads at %ld\n", pthread_self(),get_counter());
+        /*expectedEndTime = get_counter()+10000;
+        expectedEndTime = expectedEndTime << 1;
         //push flag event
-        if (!mEventsAreDoomed) {
-          nsIRunnable* newFlagEvent=new Runnable();
-          mEventsRoot.PutEvent(event.take(), lock, expectedEndTime);
-        }
+        nsIRunnable* newFlagEvent=new Runnable();
+        printf("put flag event to main thread %ld\n", expectedEndTime);
+        mEventsRoot.PutEvent(newFlagEvent, lock, expectedEndTime | 1);*/
+      }
+
+      else{
+
+        //printf("%lx Main thread put event to itself at %ld\n", pthread_self(), get_counter());
+        //expectedEndTime=get_counter();
       }
 
       // Main thread put event to callback function push to main event queue
-      else if(expTime>0){
+      /*else{
         // Main thread is waiting
-        if(flag && flagTime==expTime){
-            printf("Main thread is waiting\n");
-            flagEvent=event.get();
-            flag=false;
+        if(this->flag)printf("have flag %ld\n",this->flagTime);
+        if(this->flag && this->flagTime==expTime){
+            //printf("Main thread is waiting\n");
+            this->flagEvent=event.get();
+            this->flag=false;
             put=false;
         }
         // swap flag event
         else{
-          //swap flag
-          printf("swap flag\n");
+          //printf("swap flag %ld\n",expTime);
           mEventsRoot.SecSwapRunnable(event.get(),expTime,lock);
           put=false;
         }
-      }
+      }*/
     }
     else{
-      expectedEndTime=expTime;
-      expTime=0;
+      //if(aTarget)printf("%lx non Main thread put event to other non main thread %ld\n", pthread_self(), get_counter());
+      //else printf("%lx non Main thread put event to itself %ld\n", pthread_self(), get_counter());
+      //if(expTime>0)printf("nonMain thread put %ld to nonMain thread\n",expTime);
+      /*expectedEndTime=expTime;
+      expTime=0;*/
     }
 
     //SECLAB END
@@ -831,6 +838,9 @@ nsThread::Dispatch(already_AddRefed<nsIRunnable> aEvent, uint32_t aFlags)
 {
   LOG(("THRD(%p) Dispatch [%p %x]\n", this, /* XXX aEvent */nullptr, aFlags));
 
+  if(pthread_self()==getJSThread()){
+    int i=1;
+  }
   return DispatchInternal(Move(aEvent), aFlags, nullptr);
 }
 
@@ -1128,31 +1138,40 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
       }
 
       //SECLAB BEGIN 10/14/2016 seclab next event
-      if(NS_IsMainThread()){
-        flag=*expectedEndTime & 1;
-        //if(*expectedEndTime!=0)printf("------%ld\n",*expectedEndTime);
-        *expectedEndTime=*expectedEndTime>>1;
-        //if(*expectedEndTime!=0)printf("%ld\n",*expectedEndTime);
-        if(flag && *expectedEndTime > 0){
-          flagEvent=event.get();
-          flagTime=*expectedEndTime;
-          printf("isFlag\n");
-          while(flag){
-            printf("lock at %ld\n",flagTime);
-            //if(get_counter()-*expectedEndTime>100000)break;
+      if(pthread_self()==getJSThread()){
+        //printf("main thread %x\n",pthread_self());
+        //if(*expectedEndTime!=0)printf("%lx get %ld\n",pthread_self(),*expectedEndTime);
+        //if(*expectedEndTime & 1)printf("get flag in main thread\n");
+      }
+      else{
+        //printf("non main thread %x\n",pthread_self());
+        //if(*expectedEndTime & 1)printf("get flag\n");
+      }
+      /*if(NS_IsMainThread()){
+        if(*expectedEndTime & 1){
+          this->flag=true;
+          this->flagTime=*expectedEndTime-1;
+          while(this->flag){
+            printf("lock at %ld\n",this->flagTime-1);
           }
-          printf("breakFlag\n");
           event=flagEvent;
           flagEvent=NULL;
-          if(*expectedEndTime>get_counter())set_counter(*expectedEndTime);
+          flagTime=0;
         }
       }
       else{
-        expTime=0;
-        if(*expectedEndTime>0)expTime=*expectedEndTime;
-      }
+        this->expTime=0;
+        if(*expectedEndTime>0){
+          //printf("expectedEndTime:%ld\n",*expectedEndTime);
+          this->expTime=*expectedEndTime;
+        }
+      }*/
 
       //SECLAB END
+
+
+      if(event->isFlag())printf("get flag\n");
+      bool flagt=event->isFlag();
 
       event->Run();
     } else if (aMayWait) {

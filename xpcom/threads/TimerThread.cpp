@@ -404,6 +404,12 @@ struct IntervalComparator
 
 } // namespace
 
+//SECLAB BEGIN 10/20/2016
+bool TimerThread::isFlag(){
+  return true;
+}
+//SECLAB END
+
 NS_IMETHODIMP
 TimerThread::Run()
 {

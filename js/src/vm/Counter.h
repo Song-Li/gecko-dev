@@ -21,4 +21,6 @@ void set_counter(uint64_t time);
 void * reset_counter();
 uint64_t get_scaled_counter(uint64_t args);
 
+uint64_t getJSThread();
+
 #endif

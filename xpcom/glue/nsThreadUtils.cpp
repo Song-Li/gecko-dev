@@ -28,6 +28,8 @@ using mozilla::IsVistaOrLater;
 #include <pratom.h>
 #include <prthread.h>
 
+#include "../../js/src/vm/Counter.h"
+
 using namespace mozilla;
 
 #ifndef XPCOM_GLUE_AVOID_NSPR
@@ -178,6 +180,10 @@ NS_DispatchToCurrentThread(nsIRunnable* aEvent)
 nsresult
 NS_DispatchToMainThread(already_AddRefed<nsIRunnable>&& aEvent, uint32_t aDispatchFlags)
 {
+  //uint64_t c=get_counter();
+  //uint64_t t=getJSThread();
+  //printf("NS_DispatchToMainThread %lx\n",t);
+
   LeakRefPtr<nsIRunnable> event(Move(aEvent));
   nsCOMPtr<nsIThread> thread;
   nsresult rv = NS_GetMainThread(getter_AddRefs(thread));

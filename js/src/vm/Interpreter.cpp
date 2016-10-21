@@ -72,8 +72,15 @@ using JS::ForOfIterator;
 
 volatile uint64_t counter = 0;
 
-void * inc_counter(void * args) {
+uint64_t jsThread;
 
+uint64_t getJSThread(){
+    return jsThread;
+}
+
+void * inc_counter(void * args) {
+    //printf("JS thread : %ld\n",pthread_self());
+    jsThread=pthread_self();
     uint64_t c = (uint64_t)args;
     counter += c;
     JS_COUNTER_LOG("counter %i inc %i", counter, c);

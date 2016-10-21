@@ -55,6 +55,10 @@ public:
     return mThread == NS_GetCurrentThread();
   }
 
+  //SECLAB BEGIN 10/20/2016
+  bool isFlag();
+  //SECLAB END
+
 private:
   ~TimerThread();
 
