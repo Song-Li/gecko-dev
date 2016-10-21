@@ -50,7 +50,7 @@ public:
   };
 
   //SECLAB BEGIN 10/20/2016
-  using nsIRunnable::isFlag;
+  //using nsIRunnable::isFlag;
   bool isFlag(){
     return false;
   }
